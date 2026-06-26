@@ -34,12 +34,20 @@ class DigitalEvidenceArchiver:
     def _create_session(self):
         """Create requests session with retry strategy"""
         session = requests.Session()
-        retry_strategy = Retry(
-            total=3,
-            backoff_factor=1,
-            status_forcelist=[429, 500, 502, 503, 504],
-            allowed_methods=["HEAD", "GET", "OPTIONS"]
-        )
+        
+        # Handle both urllib3 versions
+        retry_kwargs = {
+            'total': 3,
+            'backoff_factor': 1,
+            'status_forcelist': [429, 500, 502, 503, 504]
+        }
+        
+        # Try new parameter name first, fall back to old name if needed
+        try:
+            retry_strategy = Retry(**retry_kwargs, allowed_methods=["HEAD", "GET", "OPTIONS"])
+        except TypeError:
+            retry_strategy = Retry(**retry_kwargs, method_whitelist=["HEAD", "GET", "OPTIONS"])
+        
         adapter = HTTPAdapter(max_retries=retry_strategy)
         session.mount("http://", adapter)
         session.mount("https://", adapter)
