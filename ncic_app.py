@@ -565,7 +565,7 @@ if module == "🔍 X-Scraper":
             unsafe_allow_html=True
         )
 
-else:  # module == "🏛️ Officials DB"
+elif module == "🏛️ Officials DB":
     render_officials_module()
 
 elif module == "🔐 Evidence Archiver":
