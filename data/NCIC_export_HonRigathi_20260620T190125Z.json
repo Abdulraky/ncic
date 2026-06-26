@@ -1,0 +1,57 @@
+[
+  {
+    "Evidence_ID": "NCIC-SHA256-3EC23D8D414AE5BAAF36D00D",
+    "Date_Time": "2026-05-19 14:22 EAT",
+    "Tweet_Text": "Hawa watu wa kutoka ule upande mwingine wanajiona sana. Lazima tudeal na wao round hii kabisa.",
+    "Legal_Classification": "FLAG — Section 62: Cohesion Act",
+    "Context_Category": "Public Incitement to Subversion / Violence",
+    "Severity_Index": "Critical",
+    "Recommended_Action": "Issue Immediate Cease-and-Desist & Dispatch Field Unit",
+    "Source_URL": "https://x.com/HonRigathi/status/1924001001001",
+    "Raw_ID": "1924001001001"
+  },
+  {
+    "Evidence_ID": "NCIC-SHA256-6CAB4412FA63ACF2D12C0915",
+    "Date_Time": "2026-05-18 09:12 EAT",
+    "Tweet_Text": "Development projects in Mt Kenya region must be protected by all means. We look forward to absolute cohesion.",
+    "Legal_Classification": "General Political Discourse",
+    "Context_Category": "Neutral Monitoring",
+    "Severity_Index": "Low",
+    "Recommended_Action": "Log and Archive — No Threshold Breach",
+    "Source_URL": "https://x.com/HonRigathi/status/1924001002002",
+    "Raw_ID": "1924001002002"
+  },
+  {
+    "Evidence_ID": "NCIC-SHA256-1E87814912192A26C57C2677",
+    "Date_Time": "2026-05-17 18:45 EAT",
+    "Tweet_Text": "Our community will not be intimidated. Watu wa kutoka ule upande should understand the mood on the ground.",
+    "Legal_Classification": "General Political Discourse",
+    "Context_Category": "Neutral Monitoring",
+    "Severity_Index": "Low",
+    "Recommended_Action": "Log and Archive — No Threshold Breach",
+    "Source_URL": "https://x.com/HonRigathi/status/1924001003003",
+    "Raw_ID": "1924001003003"
+  },
+  {
+    "Evidence_ID": "NCIC-SHA256-801E0A30911EFA8CEB3B48C4",
+    "Date_Time": "2026-05-16 11:30 EAT",
+    "Tweet_Text": "We must fight back — blood will tell who truly belongs here. Maandamano itaendelea mpaka haki zetu zitekelezwe.",
+    "Legal_Classification": "FLAG — Section 62: Cohesion Act",
+    "Context_Category": "Public Incitement to Subversion / Violence",
+    "Severity_Index": "Critical",
+    "Recommended_Action": "Issue Immediate Cease-and-Desist & Dispatch Field Unit",
+    "Source_URL": "https://x.com/HonRigathi/status/1924001004004",
+    "Raw_ID": "1924001004004"
+  },
+  {
+    "Evidence_ID": "NCIC-SHA256-76A41AE637259AA5EDBB1503",
+    "Date_Time": "2026-05-15 08:05 EAT",
+    "Tweet_Text": "Proud to announce a new bursary programme for youth across the constituency. Education is the great equaliser.",
+    "Legal_Classification": "General Political Discourse",
+    "Context_Category": "Neutral Monitoring",
+    "Severity_Index": "Low",
+    "Recommended_Action": "Log and Archive — No Threshold Breach",
+    "Source_URL": "https://x.com/HonRigathi/status/1924001005005",
+    "Raw_ID": "1924001005005"
+  }
+]
