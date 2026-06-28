@@ -15,10 +15,10 @@ from pathlib import Path
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 
-# Import custom modules
-from officials_module import render_officials_module
-from evidence_archiver_module import render_evidence_archiver_module
-from authenticity_module import render_authenticity_module
+# Import custom modules (using v2 refactored versions with services)
+from officials_module_v2 import render_officials_module
+from evidence_archiver_module_v2 import render_evidence_archiver_module
+from authenticity_module_v2 import render_authenticity_module
 
 # ──────────────────────────────────────────────────────────────────────────────
 # PAGE CONFIG
