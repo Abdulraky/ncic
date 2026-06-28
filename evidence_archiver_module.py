@@ -84,9 +84,9 @@ def render_evidence_archiver_module():
                 - Party: {selected_official['party']}
                 
                 **Social Media Handles:**
-                - Twitter: @{selected_official.get('twitter_handle', 'N/A')}
-                - Instagram: @{selected_official.get('instagram_handle', 'N/A')}
-                - TikTok: @{selected_official.get('tiktok_handle', 'N/A')}
+                - Twitter: @{selected_official.get('twitter', 'N/A')}
+                - Instagram: @{selected_official.get('instagram', 'N/A')}
+                - TikTok: @{selected_official.get('tiktok', 'N/A')}
                 """)
         
         if selected_official and st.button("🚀 START FORENSIC COLLECTION", use_container_width=True):
@@ -115,13 +115,13 @@ def render_evidence_archiver_module():
                         total_posts = 0
                         
                         # Collect from Twitter
-                        if selected_official.get('twitter_handle'):
+                        if selected_official.get('twitter'):
                             status_text.text("🐦 Scraping Twitter posts...")
                             progress_bar.progress(0.15)
                             
                             try:
                                 twitter_posts = client.scrape_twitter_posts(
-                                    selected_official['twitter_handle'],
+                                    selected_official['twitter'],
                                     max_posts=50
                                 )
                                 all_posts.extend(twitter_posts)
@@ -131,13 +131,13 @@ def render_evidence_archiver_module():
                                 results_container.warning(f"⚠ Twitter scrape failed: {str(e)}")
                         
                         # Collect from Instagram
-                        if selected_official.get('instagram_handle'):
+                        if selected_official.get('instagram'):
                             status_text.text("📷 Scraping Instagram posts...")
                             progress_bar.progress(0.40)
                             
                             try:
                                 insta_posts = client.scrape_instagram_posts(
-                                    selected_official['instagram_handle'],
+                                    selected_official['instagram'],
                                     max_posts=50
                                 )
                                 all_posts.extend(insta_posts)
@@ -147,13 +147,13 @@ def render_evidence_archiver_module():
                                 results_container.warning(f"⚠ Instagram scrape failed: {str(e)}")
                         
                         # Collect from TikTok
-                        if selected_official.get('tiktok_handle'):
+                        if selected_official.get('tiktok'):
                             status_text.text("🎵 Scraping TikTok posts...")
                             progress_bar.progress(0.65)
                             
                             try:
                                 tiktok_posts = client.scrape_tiktok_posts(
-                                    selected_official['tiktok_handle'],
+                                    selected_official['tiktok'],
                                     max_posts=50
                                 )
                                 all_posts.extend(tiktok_posts)

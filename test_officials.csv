@@ -1,0 +1,6 @@
+official_id,name,office,county,constituency,party,verified_x,twitter,facebook,youtube,tiktok,instagram,website,active
+OFF001,John Mwangi,Governor,Nairobi,Central,Political Party A,1,JohnMwangi,John Mwangi Official,JMwangiYT,@johnmwangi,johnmwangi,www.johnmwangi.ke,1
+OFF002,Sarah Kipchoge,Senator,Nairobi,Central,Political Party B,1,SarahKipchoge,Sarah Kipchoge,SarahKipYT,@sarahkip,sarahkipchoge,www.sarahkipchoge.ke,1
+OFF003,David Ouma,Deputy Governor,Nakuru,Central,Political Party A,0,DavidOuma,David Ouma,DavidOumaYT,@davidouma,davidouma,www.davidouma.ke,1
+OFF004,Grace Njoki,Representative,Kiambu,North,Political Party C,1,GraceNjoki,Grace Njoki,GraceNjokiYT,@gracenjoki,gracenjoki,www.gracenjoki.ke,1
+OFF005,Peter Kiplagat,MCA,Uasin Gishu,East,Political Party B,0,PeterKiplagat,Peter Kiplagat,PeterKipYT,@peterkip,peterkiplagat,www.peterkiplagat.ke,1

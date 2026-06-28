@@ -35,6 +35,7 @@ class OfficialsDatabase:
                 constituency TEXT,
                 party TEXT,
                 verified_x BOOLEAN DEFAULT 0,
+                twitter TEXT,
                 facebook TEXT,
                 youtube TEXT,
                 tiktok TEXT,
@@ -86,8 +87,8 @@ class OfficialsDatabase:
             cursor.execute("""
                 INSERT OR REPLACE INTO officials 
                 (official_id, name, office, county, constituency, party, 
-                 verified_x, facebook, youtube, tiktok, instagram, website, active)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 verified_x, twitter, facebook, youtube, tiktok, instagram, website, active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 official_data.get('official_id'),
                 official_data.get('name'),
@@ -96,6 +97,7 @@ class OfficialsDatabase:
                 official_data.get('constituency'),
                 official_data.get('party'),
                 official_data.get('verified_x', False),
+                official_data.get('twitter'),
                 official_data.get('facebook'),
                 official_data.get('youtube'),
                 official_data.get('tiktok'),
