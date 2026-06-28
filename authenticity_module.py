@@ -8,6 +8,7 @@ import pandas as pd
 import json
 from pathlib import Path
 from authenticity_verifier import AuthenticityVerifier
+from report_generator import ReportGenerator
 from officials_db import OfficialsDatabase
 from datetime import datetime
 import sqlite3
@@ -381,11 +382,39 @@ def render_authenticity_module():
         
         with col2:
             st.markdown("**Export as PDF**")
-            st.info("PDF export requires reportlab library. Install with: pip install reportlab")
             
-            if st.button("📄 Generate PDF Report", key="pdf_export"):
-                try:
-                    import reportlab
-                    st.info("PDF generation logic would be implemented here using reportlab")
-                except ImportError:
-                    st.warning("reportlab not installed. Install to enable PDF export: pip install reportlab")
+            results_dir = Path("data/verification_results")
+            
+            if results_dir.exists() and any(results_dir.glob("*.json")):
+                if st.button("📄 Generate PDF Report", key="pdf_export"):
+                    try:
+                        # Load results
+                        result_files = list(results_dir.glob("*.json"))[:100]
+                        
+                        all_results = []
+                        for result_file in result_files:
+                            with open(result_file, 'r') as f:
+                                result = json.load(f)
+                                result["file"] = result_file.name
+                                all_results.append(result)
+                        
+                        # Generate PDF
+                        report_gen = ReportGenerator()
+                        pdf_bytes = report_gen.generate_pdf_report(all_results)
+                        
+                        st.download_button(
+                            label="📥 Download PDF",
+                            data=pdf_bytes,
+                            file_name=f"verification_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                            mime="application/pdf",
+                            use_container_width=True
+                        )
+                        
+                        st.success(f"✅ Generated PDF with {len(all_results)} verification records")
+                        
+                    except ImportError:
+                        st.error("❌ reportlab not installed. Run: pip install reportlab")
+                    except Exception as e:
+                        st.error(f"Error generating PDF: {str(e)}")
+            else:
+                st.info("No verification results available for export")
