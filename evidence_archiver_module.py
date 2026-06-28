@@ -179,23 +179,19 @@ def render_evidence_archiver_module():
                                 # Insert into database
                                 cursor.execute("""
                                     INSERT INTO evidence_items (
-                                        collection_id, item_type, platform, 
-                                        username, post_id, source_url, content,
-                                        captured_date, sha256_hash, md5_hash, 
-                                        raw_data, file_path
-                                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                        collection_id, item_type, source_url,
+                                        sha256_hash, md5_hash, file_size_bytes,
+                                        mime_type, captured_date, file_path
+                                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                                 """, (
                                     collection_id,
                                     'social_media_post',
-                                    post.get('platform', 'unknown'),
-                                    post.get('username', ''),
-                                    post.get('post_id', ''),
                                     post.get('url', ''),
-                                    post.get('text', '')[:1000],
-                                    post.get('timestamp', datetime.now().isoformat()),
                                     sha256_hash,
                                     md5_hash,
-                                    post_json,
+                                    len(post_json),
+                                    'application/json',
+                                    post.get('timestamp', datetime.now().isoformat()),
                                     None
                                 ))
                             except Exception as e:
