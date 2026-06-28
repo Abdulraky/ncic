@@ -18,6 +18,7 @@ from sklearn.linear_model import LogisticRegression
 # Import custom modules
 from officials_module import render_officials_module
 from evidence_archiver_module import render_evidence_archiver_module
+from authenticity_module import render_authenticity_module
 
 # ──────────────────────────────────────────────────────────────────────────────
 # PAGE CONFIG
@@ -312,7 +313,7 @@ st.markdown(
 st.sidebar.markdown("## 📦 MODULES")
 module = st.sidebar.radio(
     "Select Module",
-    ["🔍 X-Scraper", "🏛️ Officials DB", "🔐 Evidence Archiver"],
+    ["🔍 X-Scraper", "🏛️ Officials DB", "🔐 Evidence Archiver", "🔍 Authenticity Score"],
     label_visibility="collapsed"
 )
 st.sidebar.markdown("---")
@@ -570,3 +571,6 @@ elif module == "🏛️ Officials DB":
 
 elif module == "🔐 Evidence Archiver":
     render_evidence_archiver_module()
+
+elif module == "🔍 Authenticity Score":
+    render_authenticity_module()
