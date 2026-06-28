@@ -6,7 +6,7 @@ import hashlib
 import json
 import numpy as np
 import html as html_lib
-from apify_client import ApifyClient
+from apify_client import ApifyClient as OfficialApifyClient
 import os
 import time
 from pathlib import Path
@@ -357,23 +357,67 @@ if module == "🔍 X-Scraper":
             raw = build_sim(profile_handle)
         else:
             st.info(f"Dispatching Apify crawler to X: @{profile_handle}…")
-            client = ApifyClient(token_input.strip())
-            raw = []
-            attempts = 3
-            for attempt in range(1, attempts + 1):
-                try:
-                    raw = client.scrape_twitter_posts(profile_handle, max_posts=max_tweets)
-                    if not raw:
-                        st.warning("Apify returned empty results for this handle.")
-                    break
-                except Exception as e:
-                    if attempt == attempts:
-                        st.error(f"Apify fault after {attempts} attempts: {e}")
-                        raw = []
-                    else:
-                        backoff = attempt * 1.5
-                        st.info(f"Apify call failed (attempt {attempt}/{attempts}), retrying in {backoff}s...")
-                        time.sleep(backoff)
+            try:
+                client = OfficialApifyClient(token_input.strip())
+                raw = []
+                attempts = 3
+                
+                for attempt in range(1, attempts + 1):
+                    try:
+                        # Use official Apify client to run Twitter scraper actor
+                        run = client.actor("apidojo/tweet-scraper").call(run_input={
+                            "twitterHandles": [profile_handle.lstrip("@")],
+                            "maxItems": max_tweets,
+                            "sort": "Latest"
+                        })
+                        
+                        # Get results from the run's dataset
+                        if run and run.get("defaultDatasetId"):
+                            dataset_id = run["defaultDatasetId"]
+                            items = list(client.dataset(dataset_id).list_items().items)
+                            raw = items or []
+                            
+                            if raw:
+                                st.success(f"✅ Retrieved {len(raw)} posts from @{profile_handle}")
+                                break
+                            else:
+                                if attempt < attempts:
+                                    st.info(f"Empty results on attempt {attempt}/{attempts}, retrying…")
+                                    time.sleep(attempt * 1.5)
+                                else:
+                                    st.warning(f"⚠️ Apify returned no posts for @{profile_handle}.\n\n"
+                                             f"**Possible causes:**\n"
+                                             f"• Invalid or expired API token\n"
+                                             f"• Handle does not exist or is private\n"
+                                             f"• Rate limit exceeded\n\n"
+                                             f"**Try:** Use simulation mode (clear the API token field)")
+                        else:
+                            if attempt < attempts:
+                                st.info(f"No dataset returned (attempt {attempt}/{attempts}), retrying…")
+                                time.sleep(attempt * 1.5)
+                            else:
+                                st.error("Apify actor run failed to return results")
+                                
+                    except Exception as e:
+                        if attempt == attempts:
+                            st.error(f"Apify API error after {attempts} attempts: {str(e)[:150]}")
+                            st.info("💡 **Troubleshooting:**\n"
+                                   "1. Verify your Apify API token is valid\n"
+                                   "2. Check the handle exists on X (@handle)\n"
+                                   "3. Clear the token field to use simulation mode")
+                            raw = []
+                        else:
+                            backoff = attempt * 1.5
+                            st.info(f"Apify call failed (attempt {attempt}/{attempts}), retrying in {backoff}s...")
+                            time.sleep(backoff)
+                            
+            except Exception as e:
+                st.error(f"Apify client error: {str(e)[:200]}")
+                st.info("💡 **Troubleshooting:**\n"
+                       "1. Verify your Apify API token is valid and not expired\n"
+                       "2. Check your internet connection\n"
+                       "3. Clear the token field to use simulation mode")
+                raw = []
 
         for item in raw:
             if raw_sample_item is None:

@@ -22,9 +22,23 @@ class CollectorService:
             return []
         
         try:
-            posts = self.client.scrape_twitter_posts(handle, MAX_POSTS_PER_PLATFORM)
-            logger.info(f"Collected {len(posts)} posts from Twitter @{handle}")
-            return posts
+            # Run the apidojo/tweet-scraper actor
+            run = self.client.actor("apidojo/tweet-scraper").call(run_input={
+                "twitterHandles": [handle.lstrip("@")],
+                "maxItems": MAX_POSTS_PER_PLATFORM,
+                "sort": "Latest"
+            })
+            
+            if not run or not run.get("defaultDatasetId"):
+                logger.warning(f"No dataset returned for Twitter @{handle}")
+                return []
+            
+            # Fetch results from the dataset
+            dataset_id = run["defaultDatasetId"]
+            items = list(self.client.dataset(dataset_id).list_items().items)
+            
+            logger.info(f"Collected {len(items)} posts from Twitter @{handle}")
+            return items
         except Exception as e:
             logger.error(f"Error collecting Twitter posts: {e}")
             return []
@@ -36,9 +50,21 @@ class CollectorService:
             return []
         
         try:
-            posts = self.client.scrape_instagram_posts(username, MAX_POSTS_PER_PLATFORM)
-            logger.info(f"Collected {len(posts)} posts from Instagram @{username}")
-            return posts
+            # Run the instagram-scraper actor
+            run = self.client.actor("apidojo/instagram-scraper").call(run_input={
+                "usernames": [username.lstrip("@")],
+                "resultsLimit": MAX_POSTS_PER_PLATFORM,
+            })
+            
+            if not run or not run.get("defaultDatasetId"):
+                logger.warning(f"No dataset returned for Instagram @{username}")
+                return []
+            
+            dataset_id = run["defaultDatasetId"]
+            items = list(self.client.dataset(dataset_id).list_items().items)
+            
+            logger.info(f"Collected {len(items)} posts from Instagram @{username}")
+            return items
         except Exception as e:
             logger.error(f"Error collecting Instagram posts: {e}")
             return []
@@ -50,9 +76,21 @@ class CollectorService:
             return []
         
         try:
-            posts = self.client.scrape_tiktok_posts(username, MAX_POSTS_PER_PLATFORM)
-            logger.info(f"Collected {len(posts)} posts from TikTok @{username}")
-            return posts
+            # Run the tiktok-scraper actor
+            run = self.client.actor("clockworks/tiktok-scraper").call(run_input={
+                "usernames": [username.lstrip("@")],
+                "resultsLimit": MAX_POSTS_PER_PLATFORM,
+            })
+            
+            if not run or not run.get("defaultDatasetId"):
+                logger.warning(f"No dataset returned for TikTok @{username}")
+                return []
+            
+            dataset_id = run["defaultDatasetId"]
+            items = list(self.client.dataset(dataset_id).list_items().items)
+            
+            logger.info(f"Collected {len(items)} posts from TikTok @{username}")
+            return items
         except Exception as e:
             logger.error(f"Error collecting TikTok posts: {e}")
             return []
