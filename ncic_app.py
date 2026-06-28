@@ -6,7 +6,7 @@ import hashlib
 import json
 import numpy as np
 import html as html_lib
-from apify_client import ApifyClient as OfficialApifyClient
+import asyncio
 import os
 import time
 import random
@@ -16,6 +16,14 @@ from pathlib import Path
 # Lightweight NLP dependencies
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
+
+# Twitter scraping (lazy import)
+try:
+    from twscrape import API
+    TWSCRAPE_AVAILABLE = True
+except ImportError:
+    TWSCRAPE_AVAILABLE = False
+    API = None
 
 # Database imports for demo data
 from database import SessionLocal
@@ -383,6 +391,57 @@ def _fallback_demo_tweets(handle):
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# TWSCRAPE SCRAPER
+# ──────────────────────────────────────────────────────────────────────────────
+async def scrape_tweets_twscrape(username: str, limit: int = 5) -> list:
+    """
+    Scrape tweets from a Twitter/X user using twscrape
+    Returns list of tweets with standard format
+    """
+    if not TWSCRAPE_AVAILABLE:
+        raise RuntimeError("twscrape not installed. Run: pip install twscrape")
+    
+    try:
+        api = API()
+        tweets = []
+        count = 0
+        
+        async for tweet in api.search(f"from:{username}", limit=limit):
+            tweets.append({
+                "id": str(tweet.id),
+                "text": tweet.rawContent,
+                "created_at": tweet.createdAt.strftime("%Y-%m-%d %H:%M %Z") if tweet.createdAt else "Unknown",
+                "url": f"https://x.com/{tweet.user.username}/status/{tweet.id}",
+                "author_name": tweet.user.name or tweet.user.username,
+                "author_handle": tweet.user.username,
+            })
+            count += 1
+            if count >= limit:
+                break
+        
+        return tweets
+    except Exception as e:
+        st.error(f"❌ Error scraping tweets: {str(e)}")
+        return []
+
+def scrape_with_twscrape(username: str, limit: int = 5) -> list:
+    """Sync wrapper for twscrape async function"""
+    if not TWSCRAPE_AVAILABLE:
+        st.error("❌ twscrape not installed. Falling back to simulation mode.")
+        return []
+    
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(scrape_tweets_twscrape(username, limit))
+        loop.close()
+        return result
+    except Exception as e:
+        st.error(f"❌ Error in twscrape wrapper: {str(e)}")
+        return []
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # HEADER
 # ──────────────────────────────────────────────────────────────────────────────
 st.markdown(
@@ -415,16 +474,23 @@ if module == "🔍 X-Scraper":
     # X-SCRAPER CONFIGURATION
     # ──────────────────────────────────────────────────────────────────────────────
     st.sidebar.markdown("**Integration Gateway**")
-    token_input    = st.sidebar.text_input("Apify API Token", type="password", placeholder="Paste key for live scraping…")
+    st.sidebar.markdown("*twscrape - Native Twitter/X Scraper*")
+    
+    if TWSCRAPE_AVAILABLE:
+        use_twscrape = st.sidebar.checkbox("Enable Live Scraping (requires Twitter account)", value=False)
+    else:
+        st.sidebar.warning("⚠️ twscrape not installed. Using simulation mode only.")
+        use_twscrape = False
+    
     profile_handle = st.sidebar.text_input("Target Profile Handle", value="HonRigathi")
     max_tweets     = st.sidebar.slider("Timeline Depth (Tweets)", 3, 20, 5)
     st.sidebar.markdown("---")
     st.sidebar.markdown(f"[Open @{profile_handle} on X ↗](https://x.com/{profile_handle})")
     st.sidebar.markdown("---")
     severity_filter = st.sidebar.multiselect("Filter by Severity", options=["Critical","High","Low"], default=["Critical","High","Low"])
-    show_debug      = st.sidebar.checkbox("Show raw Apify field debug", value=False)
+    show_debug      = st.sidebar.checkbox("Show raw field debug", value=False)
 
-    sim_mode = not bool(token_input.strip())
+    sim_mode = not use_twscrape
 
     # Session state
     for key, default in [("cached_df", None), ("cached_handle", ""), ("sim_mode", True), ("raw_sample", None)]:
@@ -445,76 +511,29 @@ if module == "🔍 X-Scraper":
         raw_sample_item = None
 
         if sim_mode:
-            st.warning("Simulation Mode — no Apify token provided. Processing over demo dataset.")
+            st.warning("Simulation Mode — using demo dataset from Government Roster.")
             raw = build_sim(profile_handle)
         else:
-            st.info(f"Dispatching Apify crawler to X: @{profile_handle}…")
+            st.info(f"🔍 Scraping tweets for @{profile_handle} using twscrape…")
             try:
-                client = OfficialApifyClient(token_input.strip())
-                raw = []
-                attempts = 1  # Single attempt for now, debugging
+                raw = scrape_with_twscrape(profile_handle, max_tweets)
                 
-                for attempt in range(1, attempts + 1):
-                    try:
-                        # Use official Apify client to run Twitter scraper actor
-                        st.info(f"🔍 Calling actor: apidojo/tweet-scraper with handle: @{profile_handle}")
-                        
-                        run = client.actor("apidojo/tweet-scraper").call(run_input={
-                            "twitterHandles": [profile_handle.lstrip("@")],
-                            "maxItems": max_tweets,
-                            "sort": "Latest"
-                        })
-                        
-                        st.success(f"✅ Actor run completed. Run ID: {run.get('id', 'unknown')}")
-                        
-                        # Get results from the run's dataset
-                        if run and run.get("defaultDatasetId"):
-                            dataset_id = run["defaultDatasetId"]
-                            st.info(f"📊 Fetching from dataset: {dataset_id}")
-                            
-                            items = list(client.dataset(dataset_id).list_items().items)
-                            raw = items or []
-                            
-                            st.success(f"✅ Retrieved {len(raw)} posts from @{profile_handle}")
-                            
-                            if raw:
-                                break
-                            else:
-                                st.warning(f"⚠️ Apify returned no posts for @{profile_handle}.\n\n"
-                                         f"**Possible causes:**\n"
-                                         f"• Invalid or expired API token\n"
-                                         f"• Handle does not exist or is private\n"
-                                         f"• Rate limit exceeded\n\n"
-                                         f"**Try:** Use simulation mode (clear the API token field)")
-                        else:
-                            st.error(f"❌ No dataset returned from actor run. Response: {run}")
-                                
-                    except Exception as e:
-                        st.error(f"❌ Apify API error: {str(e)}")
-                        st.info("💡 **Troubleshooting:**\n"
-                               "1. Verify your Apify API token is valid\n"
-                               "2. Check the handle exists on X (@handle)\n"
-                               "3. Clear the token field to use simulation mode\n\n"
-                               "**Debug Info:**\n"
-                               f"- Error: `{str(e)[:300]}`\n"
-                               f"- Token length: {len(token_input.strip())} chars\n"
-                               f"- Handle: @{profile_handle}")
-                        raw = []
-                        import traceback
-                        st.info(f"Traceback:\n```\n{traceback.format_exc()}\n```")
-                            
+                if raw:
+                    st.success(f"✅ Retrieved {len(raw)} tweets from @{profile_handle}")
+                else:
+                    st.warning(f"⚠️ No tweets found for @{profile_handle}")
+                    st.info("💡 **Possible reasons:**\n"
+                           "• Account doesn't exist or is protected\n"
+                           "• No tweets available from that account\n"
+                           "• Rate limit reached\n\n"
+                           "**Tip:** Use simulation mode to test the system with demo data")
+                    raw = build_sim(profile_handle)
+                    
             except Exception as e:
-                st.error(f"❌ Apify client initialization error: {str(e)}")
-                st.info("💡 **Troubleshooting:**\n"
-                       "1. Verify your Apify API token is valid and not expired\n"
-                       "2. Check your internet connection\n"
-                       "3. Clear the token field to use simulation mode")
-                raw = []
-        
-        # Fallback to simulation mode if API failed
-        if not raw and token_input.strip():
-            st.warning("⚠️ **Apify API failed. Falling back to simulation mode for demonstration...**")
-            raw = build_sim(profile_handle)
+                st.error(f"❌ Error scraping with twscrape: {str(e)}")
+                st.info(f"Traceback:\n```\n{traceback.format_exc()}\n```")
+                st.info("💡 **Falling back to simulation mode...**")
+                raw = build_sim(profile_handle)
 
         for item in raw:
             if raw_sample_item is None:
@@ -561,7 +580,7 @@ if module == "🔍 X-Scraper":
     # DEBUG PANEL (toggle in sidebar)
     # ──────────────────────────────────────────────────────────────────────────────
     if show_debug and st.session_state["raw_sample"] is not None:
-        with st.expander("Raw Apify Response — First Item (field mapping debug)", expanded=True):
+        with st.expander("Raw Tweet Response — First Item (field mapping debug)", expanded=True):
             st.json(st.session_state["raw_sample"])
 
 
