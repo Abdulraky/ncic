@@ -327,27 +327,24 @@ def build_sim(handle_input):
         demo_tweets = []
         tweet_counter = 1001
         
+        # Static demo content (not dependent on official object)
         demo_content = [
-            f"Proud to serve the people of {official.office}. Together, we will build a better future.",
-            f"Critical infrastructure project launched in our region. Development comes first.",
-            f"Thank you to all stakeholders who participated in today's stakeholder engagement forum.",
-            f"Our community must remain united. Unity is strength.",
-            f"Education initiative launched to support 500 youth across the region. Opportunity for all.",
-            f"Infrastructure development update: 10 projects ongoing. Progress is visible.",
-            f"Community policing initiative yielding positive results. Safety first.",
-            f"Agricultural support programme benefiting 2000 farmers. Food security matters.",
-            f"Healthcare accessibility improved with 3 new clinics opening this month.",
-            f"Youth empowerment through skills training. The future is now.",
+            "Proud to serve the people. Together, we will build a better future.",
+            "Critical infrastructure project launched in our region. Development comes first.",
+            "Thank you to all stakeholders who participated in today's stakeholder engagement forum.",
+            "Our community must remain united. Unity is strength.",
+            "Education initiative launched to support 500 youth across the region. Opportunity for all.",
+            "Infrastructure development update: 10 projects ongoing. Progress is visible.",
+            "Community policing initiative yielding positive results. Safety first.",
+            "Agricultural support programme benefiting 2000 farmers. Food security matters.",
+            "Healthcare accessibility improved with 3 new clinics opening this month.",
+            "Youth empowerment through skills training. The future is now.",
         ]
         
         for i, official in enumerate(selected_officials):
             for j in range(2):
                 tweet_id = f"19260{tweet_counter:05d}"
                 tweet_text = demo_content[(i * 2 + j) % len(demo_content)]
-                
-                # Add official's name for context
-                if "@" not in tweet_text:
-                    tweet_text = f"{tweet_text}"
                 
                 days_ago = 5 - (i * 2 + j)
                 hours = 14 + (j * 5)
