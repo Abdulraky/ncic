@@ -358,19 +358,13 @@ if module == "🔍 X-Scraper":
         else:
             st.info(f"Dispatching Apify crawler to X: @{profile_handle}…")
             client = ApifyClient(token_input.strip())
-            run_in = {"twitterHandles": [profile_handle], "maxItems": max_tweets, "sort": "Latest"}
             raw = []
             attempts = 3
             for attempt in range(1, attempts + 1):
                 try:
-                    run = client.actor("apidojo/tweet-scraper").call(run_input=run_in)
-                    dataset_id = run.get("defaultDatasetId")
-                    if not dataset_id:
-                        raise RuntimeError("Apify run did not return dataset id")
-                    items = list(client.dataset(dataset_id).list_items().items)
-                    raw = items or []
+                    raw = client.scrape_twitter_posts(profile_handle, max_posts=max_tweets)
                     if not raw:
-                        st.warning("Apify returned an empty dataset for this run.")
+                        st.warning("Apify returned empty results for this handle.")
                     break
                 except Exception as e:
                     if attempt == attempts:
