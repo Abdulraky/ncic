@@ -6,6 +6,11 @@ import streamlit as st
 import pandas as pd
 from pathlib import Path
 from evidence_archiver import DigitalEvidenceArchiver
+from apify_client import ApifyClient
+import json
+from datetime import datetime
+import hashlib
+import sqlite3
 
 def render_evidence_archiver_module():
     """Render the Digital Evidence Archiver module"""
@@ -59,6 +64,15 @@ def render_evidence_archiver_module():
             else:
                 st.warning("No officials found. Please import officials first in Module 1.")
                 selected_official = None
+            
+            # Apify API Token input
+            st.markdown("**Apify API Configuration**")
+            apify_token = st.text_input(
+                "Apify API Token", 
+                type="password",
+                placeholder="Paste your Apify API token for live scraping",
+                help="Get token from https://apify.com"
+            )
         
         with col2:
             if selected_official:
@@ -68,46 +82,144 @@ def render_evidence_archiver_module():
                 - Office: {selected_official['office']}
                 - County: {selected_official['county']}
                 - Party: {selected_official['party']}
+                
+                **Social Media Handles:**
+                - Twitter: @{selected_official.get('twitter_handle', 'N/A')}
+                - Instagram: @{selected_official.get('instagram_handle', 'N/A')}
+                - TikTok: @{selected_official.get('tiktok_handle', 'N/A')}
                 """)
         
         if selected_official and st.button("🚀 START FORENSIC COLLECTION", use_container_width=True):
-            with st.spinner("Initializing collection..."):
-                collection_id, archive_path = archiver.start_collection(
-                    selected_official['official_id'],
-                    selected_official['name']
-                )
-                
-                st.success(f"✓ Collection started (ID: {collection_id})")
-                st.info(f"Archive location: {archive_path}")
-                
-                # Simulate collection steps
-                progress_bar = st.progress(0)
-                status_text = st.empty()
-                
-                steps = [
-                    ("Collecting newest posts...", 0.2),
-                    ("Extracting metadata...", 0.4),
-                    ("Downloading media...", 0.6),
-                    ("Capturing HTML snapshots...", 0.75),
-                    ("Taking screenshots...", 0.85),
-                    ("Generating cryptographic hashes...", 0.95),
-                    ("Finalizing archive...", 1.0)
-                ]
-                
-                for step_text, progress in steps:
-                    status_text.text(step_text)
-                    progress_bar.progress(progress)
-                    import time
-                    time.sleep(0.5)
-                
-                # Finalize collection
-                success, message = archiver.finalize_collection(collection_id, archive_path)
-                
-                if success:
-                    st.success(f"✓ Collection complete!\n{message}")
-                    st.balloons()
-                else:
-                    st.error(f"⚠ {message}")
+            if not apify_token:
+                st.error("⚠ Apify API token required for live scraping. Paste your token above.")
+            else:
+                with st.spinner("Initializing collection..."):
+                    collection_id, archive_path = archiver.start_collection(
+                        selected_official['official_id'],
+                        selected_official['name']
+                    )
+                    
+                    st.success(f"✓ Collection started (ID: {collection_id})")
+                    st.info(f"Archive location: {archive_path}")
+                    
+                    # Real collection with Apify API
+                    progress_bar = st.progress(0)
+                    status_text = st.empty()
+                    results_container = st.container()
+                    
+                    try:
+                        client = ApifyClient(apify_token)
+                        archive_db = "data/evidence_archive/evidence_manifest.db"
+                        
+                        all_posts = []
+                        total_posts = 0
+                        
+                        # Collect from Twitter
+                        if selected_official.get('twitter_handle'):
+                            status_text.text("🐦 Scraping Twitter posts...")
+                            progress_bar.progress(0.15)
+                            
+                            try:
+                                twitter_posts = client.scrape_twitter_posts(
+                                    selected_official['twitter_handle'],
+                                    max_posts=50
+                                )
+                                all_posts.extend(twitter_posts)
+                                total_posts += len(twitter_posts)
+                                results_container.success(f"✅ Twitter: {len(twitter_posts)} posts")
+                            except Exception as e:
+                                results_container.warning(f"⚠ Twitter scrape failed: {str(e)}")
+                        
+                        # Collect from Instagram
+                        if selected_official.get('instagram_handle'):
+                            status_text.text("📷 Scraping Instagram posts...")
+                            progress_bar.progress(0.40)
+                            
+                            try:
+                                insta_posts = client.scrape_instagram_posts(
+                                    selected_official['instagram_handle'],
+                                    max_posts=50
+                                )
+                                all_posts.extend(insta_posts)
+                                total_posts += len(insta_posts)
+                                results_container.success(f"✅ Instagram: {len(insta_posts)} posts")
+                            except Exception as e:
+                                results_container.warning(f"⚠ Instagram scrape failed: {str(e)}")
+                        
+                        # Collect from TikTok
+                        if selected_official.get('tiktok_handle'):
+                            status_text.text("🎵 Scraping TikTok posts...")
+                            progress_bar.progress(0.65)
+                            
+                            try:
+                                tiktok_posts = client.scrape_tiktok_posts(
+                                    selected_official['tiktok_handle'],
+                                    max_posts=50
+                                )
+                                all_posts.extend(tiktok_posts)
+                                total_posts += len(tiktok_posts)
+                                results_container.success(f"✅ TikTok: {len(tiktok_posts)} posts")
+                            except Exception as e:
+                                results_container.warning(f"⚠ TikTok scrape failed: {str(e)}")
+                        
+                        # Store posts in database
+                        status_text.text("💾 Storing evidence items...")
+                        progress_bar.progress(0.80)
+                        
+                        conn = sqlite3.connect(archive_db)
+                        cursor = conn.cursor()
+                        
+                        for post in all_posts:
+                            try:
+                                # Generate hashes
+                                post_json = json.dumps(post)
+                                sha256_hash = hashlib.sha256(post_json.encode()).hexdigest()
+                                md5_hash = hashlib.md5(post_json.encode()).hexdigest()
+                                
+                                # Insert into database
+                                cursor.execute("""
+                                    INSERT INTO evidence_items (
+                                        collection_id, item_type, platform, 
+                                        username, post_id, source_url, content,
+                                        captured_date, sha256_hash, md5_hash, 
+                                        raw_data, file_path
+                                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                """, (
+                                    collection_id,
+                                    'social_media_post',
+                                    post.get('platform', 'unknown'),
+                                    post.get('username', ''),
+                                    post.get('post_id', ''),
+                                    post.get('url', ''),
+                                    post.get('text', '')[:1000],
+                                    post.get('timestamp', datetime.now().isoformat()),
+                                    sha256_hash,
+                                    md5_hash,
+                                    post_json,
+                                    None
+                                ))
+                            except Exception as e:
+                                results_container.warning(f"⚠ Error storing item: {str(e)}")
+                        
+                        conn.commit()
+                        conn.close()
+                        
+                        # Finalize collection
+                        status_text.text("✅ Finalizing archive...")
+                        progress_bar.progress(0.95)
+                        
+                        success, message = archiver.finalize_collection(collection_id, archive_path)
+                        progress_bar.progress(1.0)
+                        
+                        if success:
+                            st.success(f"✅ Collection Complete!\\n\\n**Collected {total_posts} items**\\n\\n{message}")
+                            st.balloons()
+                        else:
+                            st.error(f"⚠ {message}")
+                    
+                    except Exception as e:
+                        st.error(f"❌ Collection failed: {str(e)}")
+                        results_container.error(f"Error details: {str(e)}")
     
     # ════════════════════════════════════════════════════════════════════════════════
     # TAB 2: ACTIVE COLLECTIONS
