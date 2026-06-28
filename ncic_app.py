@@ -9,11 +9,17 @@ import html as html_lib
 from apify_client import ApifyClient as OfficialApifyClient
 import os
 import time
+import random
+import traceback
 from pathlib import Path
 
 # Lightweight NLP dependencies
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
+
+# Database imports for demo data
+from database import SessionLocal
+from models.politician import Official
 
 # Import custom modules (using v2 refactored versions with services)
 from officials_module_v2 import render_officials_module
@@ -278,15 +284,104 @@ def render_cards(df):
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# SIMULATION DATA
+# SIMULATION DATA — Pulls from actual database
 # ──────────────────────────────────────────────────────────────────────────────
-def build_sim(handle):
+def build_sim(handle_input):
+    """
+    Build simulation data from Government Roster database.
+    If handle_input has a match in the database, uses that official's name.
+    Otherwise, randomly selects officials with Twitter handles.
+    """
+    try:
+        db = SessionLocal()
+        
+        # Try to find the requested handle in database
+        clean_handle = handle_input.lstrip("@").lower()
+        requested_official = db.query(Official).filter(
+            Official.twitter.ilike(f"%{clean_handle}%")
+        ).first()
+        
+        # If not found, get random officials with Twitter
+        if not requested_official:
+            officials_with_twitter = db.query(Official).filter(
+                Official.twitter.isnot(None),
+                Official.twitter != ""
+            ).order_by(Official.name).all()
+            
+            if officials_with_twitter:
+                # Pick a few random officials
+                selected_officials = random.sample(
+                    officials_with_twitter,
+                    min(3, len(officials_with_twitter))
+                )
+            else:
+                # Fallback if no Twitter handles in DB
+                db.close()
+                return _fallback_demo_tweets(handle_input)
+        else:
+            selected_officials = [requested_official]
+        
+        db.close()
+        
+        # Generate realistic demo tweets from selected officials
+        demo_tweets = []
+        tweet_counter = 1001
+        
+        demo_content = [
+            f"Proud to serve the people of {official.office}. Together, we will build a better future.",
+            f"Critical infrastructure project launched in our region. Development comes first.",
+            f"Thank you to all stakeholders who participated in today's stakeholder engagement forum.",
+            f"Our community must remain united. Unity is strength.",
+            f"Education initiative launched to support 500 youth across the region. Opportunity for all.",
+            f"Infrastructure development update: 10 projects ongoing. Progress is visible.",
+            f"Community policing initiative yielding positive results. Safety first.",
+            f"Agricultural support programme benefiting 2000 farmers. Food security matters.",
+            f"Healthcare accessibility improved with 3 new clinics opening this month.",
+            f"Youth empowerment through skills training. The future is now.",
+        ]
+        
+        for i, official in enumerate(selected_officials):
+            for j in range(2):
+                tweet_id = f"19260{tweet_counter:05d}"
+                tweet_text = demo_content[(i * 2 + j) % len(demo_content)]
+                
+                # Add official's name for context
+                if "@" not in tweet_text:
+                    tweet_text = f"{tweet_text}"
+                
+                days_ago = 5 - (i * 2 + j)
+                hours = 14 + (j * 5)
+                created_at = f"2026-06-{28-days_ago:02d} {hours:02d}:22 EAT"
+                
+                # Extract Twitter handle (remove @ if present)
+                twitter_handle = official.twitter.lstrip("@") if official.twitter else handle_input.lstrip("@")
+                
+                demo_tweets.append({
+                    "id": tweet_id,
+                    "text": tweet_text,
+                    "created_at": created_at,
+                    "url": f"https://x.com/{twitter_handle}/status/{tweet_id}",
+                    "author_name": official.name,
+                    "author_handle": twitter_handle,
+                })
+                
+                tweet_counter += 1
+        
+        return demo_tweets[:5]  # Return first 5 tweets
+        
+    except Exception as e:
+        # Fallback if database error
+        st.warning(f"Demo data generation note: {str(e)[:100]}")
+        return _fallback_demo_tweets(handle_input)
+
+def _fallback_demo_tweets(handle):
+    """Fallback hardcoded demo tweets if database unavailable"""
     return [
-        {"id": "1924001001001", "text": "Hawa watu wa kutoka ule upande mwingine wanajiona sana. Lazima tudeal na wao round hii kabisa.", "created_at": "2026-05-19 14:22 EAT", "url": f"https://x.com/{handle}/status/1924001001001"},
-        {"id": "1924001002002", "text": "Development projects in Mt Kenya region must be protected by all means. We look forward to absolute cohesion.", "created_at": "2026-05-18 09:12 EAT", "url": f"https://x.com/{handle}/status/1924001002002"},
-        {"id": "1924001003003", "text": "Our community will not be intimidated. Watu wa kutoka ule upande should understand the mood on the ground.", "created_at": "2026-05-17 18:45 EAT", "url": f"https://x.com/{handle}/status/1924001003003"},
-        {"id": "1924001004004", "text": "We must fight back — blood will tell who truly belongs here. Maandamano itaendelea mpaka haki zetu zitekelezwe.", "created_at": "2026-05-16 11:30 EAT", "url": f"https://x.com/{handle}/status/1924001004004"},
-        {"id": "1924001005005", "text": "Proud to announce a new bursary programme for youth across the constituency. Education is the great equaliser.", "created_at": "2026-05-15 08:05 EAT", "url": f"https://x.com/{handle}/status/1924001005005"},
+        {"id": "1924001001001", "text": "Proud to serve the people. Together, we will build a better future.", "created_at": "2026-06-23 14:22 EAT", "url": f"https://x.com/{handle}/status/1924001001001"},
+        {"id": "1924001002002", "text": "Development projects in our region must be prioritized. Progress is visible.", "created_at": "2026-06-22 09:12 EAT", "url": f"https://x.com/{handle}/status/1924001002002"},
+        {"id": "1924001003003", "text": "Our community will work together for the greater good.", "created_at": "2026-06-21 18:45 EAT", "url": f"https://x.com/{handle}/status/1924001003003"},
+        {"id": "1924001004004", "text": "Thank you to all stakeholders for their continued support and engagement.", "created_at": "2026-06-20 11:30 EAT", "url": f"https://x.com/{handle}/status/1924001004004"},
+        {"id": "1924001005005", "text": "Education is the great equalizer. Supporting youth through skills development.", "created_at": "2026-06-19 08:05 EAT", "url": f"https://x.com/{handle}/status/1924001005005"},
     ]
 
 
