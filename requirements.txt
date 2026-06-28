@@ -5,3 +5,5 @@ numpy>=1.23.0
 scikit-learn>=1.2.0
 reportlab>=4.0.0
 Pillow>=9.0.0
+SQLAlchemy>=2.0.0
+psycopg2-binary>=2.9.0
